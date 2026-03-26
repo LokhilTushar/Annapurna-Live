@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Follower Royale - Dynamic Scaling</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0b0e14; font-family: 'Segoe UI', sans-serif; }
+        #screen-border { position: fixed; inset: 0; border: 15px solid white; pointer-events: none; z-index: 5; box-sizing: border-box; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; padding: 40px; box-sizing: border-box; z-index: 10; }
+        #stats { font-size: 24px; font-weight: bold; }
+        #loading-screen { position: fixed; inset: 0; background: #0b0e14; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #00d2d3; }
+        button { padding: 15px 30px; cursor: pointer; background: #00d2d3; border: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-border"></div>
+    <div id="loading-screen">
+        <h1>FOLLOWER ROYALE</h1>
+        <button onclick="startGame()">START BATTLE</button>
+    </div>
+
+    <div id="ui-layer">
+        <div id="stats">ALIVE: <span id="count" style="color: #00d2d3;">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+const followersData = [
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  },
+    { userName: "itspra.peace", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "mehul93071", avatarUrl: "https://instagram.fstv8-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.fstv8-1.fna.fbcdn.net&_nc_cat=1&_nc_oc=Q6cZ2QGdaXF5h9j80OqL_kEUErg8lHvdH12QV3aUUecC2t24njqT5mdmFsMswFjmQ2KhhXr20kDavnzHe04OLD5y66v5&_nc_ohc=iljtqeVGvPsQ7kNvwG3RfNP&_nc_gid=TC3Jm3M5RMGa2EDY8JrhDA&edm=APXIsjUBAAAA&ccb=7-5&ig_cache_key=YW5vbnltb3VzX3Byb2ZpbGVfcGlj.3-ccb7-5&oh=00_AfsWD8E5tggDMFPUlsJn2HeUap_AGZ8OM8gOh0ezCvN6ew&oe=69A1FC2A&_nc_sid=ed4851", lives: 10 },
+    { userName: "pradip__yadav_17", avatarUrl: "https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/640953115_18184483642366022_5079718148549750977_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=102&_nc_oc=Q6cZ2QHsZ09MSPaS0GjXy0Cd7vsC828ReLBA8XKT34GzMqbfFOMc3YDoMKfSHQpfucX2Xho&_nc_ohc=QqdUnIojyRQQ7kNvwH9jSw8&_nc_gid=FnAkIAjxVy287V4qZrdW8A&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfsikEiWNVHiwUEUBPLvYRSVYcpVglW_9wP0BbBRVvmM4Q&oe=69A1DB11&_nc_sid=17ea04", lives: 10 },
+    { userName: "Varsha_lokhil", avatarUrl:"https://scontent-maa3-3.cdninstagram.com/v/t51.2885-19/370354727_838660194459741_4176756939626156060_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43MTMuZXhwZXJpbWVudGFsIn0&_nc_ht=scontent-maa3-3.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=1UpE9CvX6qEQ7kNvwGmd0sa&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfvOpJSAKNbry2F9qF1Qz3rTZladNzVzgC-RM-8YiBhRdg&oe=69A2055F&_nc_sid=17ea04", lives:10},
+    { userName: "Home appliances",avatarUrl:"https://scontent-maa5-1.cdninstagram.com/v/t51.2885-19/467160420_3880283185552949_1988791846973800034_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmV4cGVyaW1lbnRhbCJ9&_nc_ht=scontent-maa5-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QF0wtWx5Kbq3dAOarC-hdDYbBCAGUnZ0vt9KEQz4XGJaz6li_toi1kRDjyRNXhlL-U&_nc_ohc=nNcVdTaWa4gQ7kNvwEh2pMh&_nc_gid=8naJl5laFX1-l8XhWzjmqA&edm=AOG-cTkBAAAA&ccb=7-5&oh=00_AfutSVxow1G1lD-4enOX2idCDpcdpnXHMMR1SGnSU2ZnMQ&oe=69A1F224&_nc_sid=17ea04",lives:10  }
+];
+
+
+const { Engine, Runner, Bodies, Composite, Events, Body, Vector } = Matter;
+const engine = Engine.create();
+engine.gravity.y = 0;
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const width = window.innerWidth;
+const height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+
+Runner.run(Runner.create(), engine);
+
+Composite.add(engine.world, [
+    Bodies.rectangle(width/2, 0, width, 40, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(width/2, height, width, 40, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(0, height/2, 40, height, { isStatic: true, label: 'wall' }),
+    Bodies.rectangle(width, height/2, 40, height, { isStatic: true, label: 'wall' })
+]);
+
+let bubbles = [];
+const BASE_SPEED = 5;
+let rotationOffset = 0;
+
+async function startGame() {
+    document.getElementById('loading-screen').style.display = 'none';
+    for (const data of followersData) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = "https://images.weserv.nl/?url=" + encodeURIComponent(data.avatarUrl);
+        await new Promise((r) => { img.onload = () => r(); img.onerror = () => r(); });
+        createBubble(data, img);
+    }
+    requestAnimationFrame(draw);
+}
+
+function createBubble(data, imgElement) {
+    // Start with a small radius for high-density simulation
+    const initialRadius = 10; 
+    const bubble = Bodies.circle(Math.random()*width, Math.random()*height, initialRadius, {
+        restitution: 1, frictionAir: 0, friction: 0, label: 'follower'
+    });
+    bubble.gameData = { ...data, currentRadius: initialRadius, img: imgElement, lives: 10 };
+    const angle = Math.random() * Math.PI * 2;
+    Body.setVelocity(bubble, { x: Math.cos(angle) * BASE_SPEED, y: Math.sin(angle) * BASE_SPEED });
+    bubbles.push(bubble);
+    Composite.add(engine.world, bubble);
+}
+
+Events.on(engine, 'collisionStart', (event) => {
+    event.pairs.forEach(pair => {
+        const { bodyA, bodyB } = pair;
+        if (bodyA.label === 'follower' && bodyB.label === 'follower') {
+            [bodyA, bodyB].forEach(body => {
+                body.gameData.lives -= 1;
+                if (body.gameData.lives <= 0) {
+                    Composite.remove(engine.world, body);
+                    bubbles = bubbles.filter(b => b.id !== body.id);
+                }
+            });
+        }
+    });
+});
+
+function draw() {
+    ctx.clearRect(0, 0, width, height);
+    const activeCount = bubbles.length;
+    document.getElementById('count').innerText = activeCount;
+    
+    rotationOffset += 0.05;
+
+    // --- ADJUSTED DYNAMIC SCALING ---
+    // Multiplier of 600-800 is better for 1000+ followers
+    const multiplier = 750; 
+    const minRadius = 10;  // Don't let them get too tiny to see
+    const maxRadius = 130; // Don't let them grow larger than the screen
+    
+    const targetRadius = Math.min(maxRadius, Math.max(minRadius, (multiplier / Math.sqrt(activeCount + 1))));
+
+    bubbles.forEach(bubble => {
+        const { x, y } = bubble.position;
+        const data = bubble.gameData;
+        
+        // Apply Scaling to Physics Body
+        const scaleFactor = targetRadius / data.currentRadius;
+        Body.scale(bubble, scaleFactor, scaleFactor);
+        data.currentRadius = targetRadius;
+
+        // Draw Saw Blade
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotationOffset);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#00d2d3";
+        ctx.strokeStyle = "#00d2d3";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        const teeth = 12;
+        for (let i = 0; i < teeth; i++) {
+            const angle = (i / teeth) * Math.PI * 2;
+            // Teeth only show if they still have lives for that "slot"
+            const r = (i < data.lives) ? targetRadius * 1.3 : targetRadius;
+            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            const nextAngle = ((i + 0.5) / teeth) * Math.PI * 2;
+            ctx.lineTo(Math.cos(nextAngle) * targetRadius, Math.sin(nextAngle) * targetRadius);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw Profile Picture
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, targetRadius * 0.7, 0, Math.PI * 2);
+        ctx.clip();
+        if (data.img && data.img.complete) {
+            ctx.drawImage(data.img, x - targetRadius * 0.7, y - targetRadius * 0.7, targetRadius * 1.4, targetRadius * 1.4);
+        }
+        ctx.restore();
+    });
+
+    if (activeCount > 0) requestAnimationFrame(draw);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+node_modules
+dist
+.env.production.local
+.env.development.local
+Annapurna Live
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
