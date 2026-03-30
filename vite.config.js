@@ -14,7 +14,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://134.209.157.119:8080', // Your backend server URL
+        target: 'https://api.annapurna.software/', // Your backend server URL
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {
